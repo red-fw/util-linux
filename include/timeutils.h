@@ -67,6 +67,29 @@ enum {
 
 #define ISO_8601_BUFSIZ	32
 
+int get_gmtoff(const struct tm *tp);
+
+/* flags and masks for strxxx_iso() functions */
+enum {
+	ISO_DATE		= (1 << 0),
+	ISO_TIME		= (1 << 1),
+	ISO_TIMEZONE		= (1 << 2),
+	ISO_DOTUSEC		= (1 << 3),
+	ISO_COMMAUSEC		= (1 << 4),
+	ISO_T			= (1 << 5),
+	ISO_GMTIME		= (1 << 6),
+	ISO_TIMESTAMP		= ISO_DATE | ISO_TIME | ISO_TIMEZONE,
+	ISO_TIMESTAMP_T		= ISO_TIMESTAMP | ISO_T,
+	ISO_TIMESTAMP_DOT	= ISO_TIMESTAMP | ISO_DOTUSEC,
+	ISO_TIMESTAMP_DOT_T	= ISO_TIMESTAMP_DOT | ISO_T,
+	ISO_TIMESTAMP_COMMA	= ISO_TIMESTAMP | ISO_COMMAUSEC,
+	ISO_TIMESTAMP_COMMA_T	= ISO_TIMESTAMP_COMMA | ISO_T,
+	ISO_TIMESTAMP_COMMA_G	= ISO_TIMESTAMP_COMMA | ISO_GMTIME,
+	ISO_TIMESTAMP_COMMA_GT  = ISO_TIMESTAMP_COMMA_G | ISO_T
+};
+
+#define ISO_BUFSIZ	42
+
 int strtimeval_iso(struct timeval *tv, int flags, char *buf, size_t bufsz);
 int strtm_iso(struct tm *tm, int flags, char *buf, size_t bufsz);
 int strtime_iso(const time_t *t, int flags, char *buf, size_t bufsz);

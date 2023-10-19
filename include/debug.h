@@ -49,11 +49,17 @@ struct ul_debug_maskname {
 #define UL_DEBUG_DEFINE_MASKNAMES(m) static const struct ul_debug_maskname m ## _masknames[]
 #define UL_DEBUG_MASKNAMES(m)	m ## _masknames
 
-#define UL_DEBUG_DEFINE_MASK(m) int m ## _debug_mask
+#define UL_DEBUG_MASK(m)         m ## _debug_mask
+#define UL_DEBUG_DEFINE_MASK(m)  int UL_DEBUG_MASK(m)
 #define UL_DEBUG_DECLARE_MASK(m) extern UL_DEBUG_DEFINE_MASK(m)
 
 /* p - flag prefix, m - flag postfix */
 #define UL_DEBUG_DEFINE_FLAG(p, m) p ## m
+/*
+ * Internal mask flags (above 0xffffff)
+ */
+#define __UL_DEBUG_FL_NOADDR	(1 << 24)	/* Don't print object address */
+
 
 /* l - library name, p - flag prefix, m - flag postfix, x - function */
 #define __UL_DBG(l, p, m, x) \
@@ -94,6 +100,32 @@ struct ul_debug_maskname {
 	} while (0)
 
 
+#define __UL_INIT_DEBUG_FROM_STRING(lib, pref, mask, str) \
+	do { \
+		if (lib ## _debug_mask & pref ## INIT) \
+		; \
+		else if (!mask && str) { \
+			lib ## _debug_mask = ul_debug_parse_mask(lib ## _masknames, str); \
+		} else \
+			lib ## _debug_mask = mask; \
+		if (lib ## _debug_mask) { \
+			if (getuid() != geteuid() || getgid() != getegid()) { \
+				lib ## _debug_mask |= __UL_DEBUG_FL_NOADDR; \
+				fprintf(stderr, "%d: %s: don't print memory addresses (SUID executable).\n", getpid(), # lib); \
+			} \
+		} \
+		lib ## _debug_mask |= pref ## INIT; \
+	} while (0)
+
+
+#define __UL_INIT_DEBUG_FROM_ENV(lib, pref, mask, env) \
+	do { \
+		const char *envstr = mask ? NULL : getenv(# env); \
+		__UL_INIT_DEBUG_FROM_STRING(lib, pref, mask, envstr); \
+	} while (0)
+
+
+
 static inline void __attribute__ ((__format__ (__printf__, 1, 2)))
 ul_debug(const char *mesg, ...)
 {
@@ -118,6 +150,46 @@ ul_debugobj(const void *handler, const char *mesg, ...)
 }
 
 static inline int ul_debug_parse_envmask(
+			const struct ul_debug_maskname flagnames[],
+			const char *mask)
+{
+	int res;
+	char *ptr;
+
+	/* let's check for a numeric mask first */
+	res = strtoul(mask, &ptr, 0);
+
+	/* perhaps it's a comma-separated string? */
+	if (ptr && *ptr && flagnames && flagnames[0].name) {
+		char *msbuf, *ms, *name;
+		res = 0;
+
+		ms = msbuf = strdup(mask);
+		if (!ms)
+			return res;
+
+		while ((name = strtok_r(ms, ",", &ptr))) {
+			const struct ul_debug_maskname *d;
+			ms = ptr;
+
+			for (d = flagnames; d && d->name; d++) {
+				if (strcmp(name, d->name) == 0) {
+					res |= d->mask;
+					break;
+				}
+			}
+			/* nothing else we can do by OR-ing the mask */
+			if (res == 0xffff)
+				break;
+		}
+		free(msbuf);
+	} else if (ptr && strcmp(ptr, "all") == 0)
+		res = 0xffff;
+
+	return res;
+}
+
+static inline int ul_debug_parse_mask(
 			const struct ul_debug_maskname flagnames[],
 			const char *mask)
 {

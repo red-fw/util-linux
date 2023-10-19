@@ -290,21 +290,6 @@ static FILE *sysfs_fopen(struct sysfs_cxt *cxt, const char *attr)
 }
 
 
-static struct dirent *xreaddir(DIR *dp)
-{
-	struct dirent *d;
-
-	while ((d = readdir(dp))) {
-		if (!strcmp(d->d_name, ".") ||
-		    !strcmp(d->d_name, ".."))
-			continue;
-
-		/* blacklist here? */
-		break;
-	}
-	return d;
-}
-
 int sysfs_is_partition_dirent(DIR *dir, struct dirent *d, const char *parent_name)
 {
 	char path[256];

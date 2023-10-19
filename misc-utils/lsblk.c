@@ -60,6 +60,7 @@
 #include "closestream.h"
 #include "mangle.h"
 #include "optutils.h"
+#include "fileutils.h"
 
 #include "debug.h"
 
@@ -403,23 +404,6 @@ static void reset_blkdev_cxt(struct blkdev_cxt *cxt)
 static int is_dm(const char *name)
 {
 	return strncmp(name, "dm-", 3) ? 0 : 1;
-}
-
-static struct dirent *xreaddir(DIR *dp)
-{
-	struct dirent *d;
-
-	assert(dp);
-
-	while ((d = readdir(dp))) {
-		if (!strcmp(d->d_name, ".") ||
-		    !strcmp(d->d_name, ".."))
-			continue;
-
-		/* blacklist here? */
-		break;
-	}
-	return d;
 }
 
 static char *get_device_path(struct blkdev_cxt *cxt)

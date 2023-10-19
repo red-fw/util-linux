@@ -254,6 +254,10 @@ static int synchronize_to_clock_tick_rtc(const struct hwclock_control *ctl)
 		warn(_("cannot open rtc device"));
 		return ret;
 	} else {
+#define FORCE_BUSY_WAIT
+#ifdef FORCE_BUSY_WAIT
+		ret = busywait_for_rtc_clock_tick(ctl, rtc_fd);
+#else
 		/* Turn on update interrupts (one per second) */
 		int rc = ioctl(rtc_fd, RTC_UIE_ON, 0);
 
@@ -294,6 +298,7 @@ static int synchronize_to_clock_tick_rtc(const struct hwclock_control *ctl)
 		} else
 			warn(_("ioctl(%d, RTC_UIE_ON, 0) to %s failed"),
 			     rtc_fd, rtc_dev_name);
+#endif
 	}
 	return ret;
 }
